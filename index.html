@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@6.x/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+    <title>Vuetifi pagination</title>
+</head>
+
+<body>
+    <div id="app">
+        <v-app>
+            <v-main>
+                <v-container>
+                    <v-row>
+                        <v-col cols="12" md="6">
+                            <v-card v-for="(item, index) of eventsDB" :key="index">
+                                <v-card-title>{{item.name}}</v-card-title>
+                                <v-card-subtitle>{{item.details}}</v-card-subtitle>
+                                <v-card-text>{{item.start}}</v-card-text>
+                                <v-card-text>{{item.end}}</v-card-text>
+                            </v-card>
+                        </v-col>
+                        <v-col>
+                            <p>Página: {{this.actualPage}} de {{this.pages}}</p>
+                            <v-btn @click="siguiente":disabled="inactive" >Siguientes...</v-btn>
+                        </v-col>
+                    </v-row>
+                </v-container>
+            </v-main>
+        </v-app>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+    <script type="module">
+         // Import the functions you need from the SDKs you need
+         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.9/firebase-app.js";
+        import { getFirestore, collection, getDocs, query, limit, orderBy,startAfter} from 'https://www.gstatic.com/firebasejs/9.6.9/firebase-firestore.js'
+
+         // Your web app's Firebase configuration
+         const firebaseConfig = {
+          apiKey: "AIzaSyAVBgmDfmv2KGrqBO2fk_QDk3sJPagHvVU",
+          authDomain: "calendar-vue-star.firebaseapp.com",
+          projectId: "calendar-vue-star",
+          storageBucket: "calendar-vue-star.appspot.com",
+          messagingSenderId: "885566235646",
+          appId: "1:885566235646:web:393c79686422d66ce496af"
+        };
+      
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app)
+        new Vue({
+            el: '#app',
+            vuetify: new Vuetify(),
+            data:{
+                eventsDB:[],
+                last: null,
+                inactive: false,
+                docsCount:0,
+                pages:0,
+                actualPage:1
+            },
+            methods:{
+                isEven(value) {
+                if (value%2 == 0)
+                return true;
+                else
+                return false;
+            },
+                async calculateDocs(){
+                    const snapshotDocs  =  await getDocs(collection(db, "events"))
+                    this.docsCount = snapshotDocs.docs.length
+                    this.pages = Math.trunc(this.isEven(this.docsCount) ? this.docsCount/2 : this.docsCount/2 +1)
+                    console.log(this.docsCount)
+                    console.log(this.pages)
+                },
+                async leerDatos(){
+                    try {
+                       const snapshot  =  await getDocs(query(collection(db, "events"), limit(2), orderBy("start")));
+                       this.last = snapshot.docs[snapshot.docs.length-1];
+                       snapshot.forEach((doc) =>{
+                            let eventData = doc.data();
+                            this.eventsDB.push(eventData)})
+                            //console.log(this.eventsDB)
+                            //console.log(this.last.data()
+                    } catch (error) {
+                        console.log(error)
+                    }
+                },
+                async siguiente(){
+                    try {
+                       const snapshot  =  await getDocs(query(collection(db, "events"), limit(2), orderBy("start"), startAfter(this.last)));
+                       this.last = snapshot.docs[snapshot.docs.length-1];
+                       snapshot.forEach((doc) =>{
+                            let eventData = doc.data();
+                            this.eventsDB.push(eventData)})
+                            // console.log(this.eventsDB)
+                            // console.log(this.last.data())
+                            this.actualPage++;
+                        if(this.actualPage === this.pages){
+                            this.inactive = true
+                        }
+                    } catch (error) {
+                        this.inactive = true
+                    }
+                }
+            },
+            created(){
+                this.calculateDocs()
+                this.leerDatos()
+            }
+        })
+    </script>
+</body>
+
+</html>
